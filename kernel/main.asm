@@ -37,4 +37,4 @@ halt_loop:
     hlt
     jmp halt_loop
 
-msg_banner db 'BingoOS Console v0.1', 13, 10, 0
+msg_banner db 'BingoOS Console v1.1 - prealpha', 13, 10, 0
