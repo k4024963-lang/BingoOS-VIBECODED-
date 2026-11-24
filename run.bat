@@ -1,6 +1,6 @@
 @echo off
 "C:\Program Files\qemu\qemu-system-i386.exe" ^
-    -drive file=build\bingo.img,format=raw,if=ide,index=0 ^
+    -drive if=ide,index=0,format=raw,file=build\bingo.img ^
     -boot c ^
     -serial stdio ^
     -display gtk
