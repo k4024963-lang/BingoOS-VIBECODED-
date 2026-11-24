@@ -1,19 +1,19 @@
 @echo off
 setlocal
-rem Set FASM to the full path if fasm.exe is not in PATH.
-if not defined FASM set "FASM=fasm.exe"
+rem Override FASM if you installed it in another location.
+if not defined FASM set "FASM=C:\\Users\\lucky\\Desktop\\axionos\\prealpha\\build01-test\\fasm\\FASM.EXE"
 set "OUT=build"
 if not exist "%OUT%" mkdir "%OUT%"
 
-echo [1/3] Assemble stage1...
+echo [1/4] Assemble stage1...
 "%FASM%" boot\stage1.asm "%OUT%\stage1.bin"
 if errorlevel 1 goto :error
 
-echo [2/3] Assemble stage2...
+echo [2/4] Assemble stage2...
 "%FASM%" boot\stage2.asm "%OUT%\stage2.bin"
 if errorlevel 1 goto :error
 
-echo [3/3] Assemble kernel...
+echo [3/4] Assemble kernel...
 "%FASM%" kernel\entry.asm "%OUT%\kernel.bin"
 if errorlevel 1 goto :error
 
