@@ -1,7 +1,7 @@
 @echo off
 setlocal
 rem Override FASM if you installed it in another location.
-if not defined FASM set "FASM=C:\\Users\\lucky\\Desktop\\axionos\\prealpha\\build01-test\\fasm\\FASM.EXE"
+if not defined FASM set "FASM=C:\Users\lucky\Desktop\axionos\prealpha\build01-test\fasm\FASM.EXE"
 set "OUT=build"
 if not exist "%OUT%" mkdir "%OUT%"
 
