@@ -13,6 +13,14 @@ fat12_mount:
     jne .fail
     cmp byte [fat12_boot_sector+16], 2
     jne .fail
+    cmp word [fat12_boot_sector+14], 66
+    jne .fail
+    cmp word [fat12_boot_sector+17], 224
+    jne .fail
+    cmp word [fat12_boot_sector+19], 2880
+    jne .fail
+    cmp word [fat12_boot_sector+22], 9
+    jne .fail
 
     movzx eax, word [fat12_boot_sector+14]
     mov [fat12_reserved], eax
@@ -35,6 +43,11 @@ fat12_mount:
     mov [fat12_root_sectors], eax
     add eax, [fat12_root_lba]
     mov [fat12_data_lba], eax
+    ; With 2880 sectors and one sector per cluster, valid IDs are 2..2783.
+    mov eax, 2880
+    sub eax, [fat12_data_lba]
+    inc eax
+    mov [fat12_max_cluster], eax
 
     mov esi, [fat12_fat_lba]
     mov ecx, [fat12_spf]
@@ -245,7 +258,7 @@ fat12_cat:
     mov eax, [fat12_current_cluster]
     cmp eax, 2
     jb .read_error
-    cmp eax, 4084
+    cmp eax, [fat12_max_cluster]
     ja .read_error
     sub eax, 2
     add eax, [fat12_data_lba]
@@ -326,6 +339,7 @@ fat12_fat_lba dd 0
 fat12_root_lba dd 0
 fat12_root_sectors dd 0
 fat12_data_lba dd 0
+fat12_max_cluster dd 0
 fat12_current_cluster dd 0
 fat12_bytes_remaining dd 0
 fat12_print_remaining dd 0
