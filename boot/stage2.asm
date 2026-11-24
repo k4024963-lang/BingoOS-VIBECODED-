@@ -1,24 +1,41 @@
-; AxionOS stage2 — GDT, A20, protected mode
+; BingoOS stage2 — load kernel, enable A20, enter 32-bit protected mode
 format binary
 org 0x8000
 
 start:
     cli
 
-    ; ES:BX = 0x1000:0x0000 = 0x10000 (куда грузим ядро)
+    ; Kernel occupies LBA 2..33 (CHS 0/0/3..18, then 0/1/1..16).
+    ; Split BIOS reads at the track boundary; do not issue a request
+    ; that crosses a 1.44 MB floppy track.
     mov ax, 0x1000
     mov es, ax
     xor bx, bx
+
+    ; First 16 sectors: cylinder 0, head 0, sectors 3..18.
     mov ah, 0x02
-    mov al, 32              ; 32 сектора = 16 КБ
+    mov al, 16
     mov ch, 0
-    mov cl, 3               ; начиная с сектора 3
+    mov cl, 3
     mov dh, 0
-    mov dl, [0x7E00]        ; boot_drive из stage1
+    mov dl, [0x7E00]
     int 0x13
     jc disk_error
 
-    ; A20
+    ; Next 16 sectors: cylinder 0, head 1, sectors 1..16.
+    mov ax, 0x1000
+    mov es, ax
+    mov bx, 0x2000
+    mov ah, 0x02
+    mov al, 16
+    mov ch, 0
+    mov cl, 1
+    mov dh, 1
+    mov dl, [0x7E00]
+    int 0x13
+    jc disk_error
+
+    ; Enable A20 through the fast A20 gate.
     in al, 0x92
     or al, 2
     out 0x92, al
@@ -28,13 +45,27 @@ start:
     mov eax, cr0
     or eax, 1
     mov cr0, eax
-
     jmp 0x08:protected_mode
 
 disk_error:
+    mov si, msg_disk_error
+    call print16
+.halt:
     cli
-    hlt                     ; Просто вешаем систему
-    jmp $
+    hlt
+    jmp .halt
+
+print16:
+    lodsb
+    test al, al
+    jz .done
+    mov ah, 0x0E
+    int 0x10
+    jmp print16
+.done:
+    ret
+
+msg_disk_error db 'BingoOS: kernel read error', 0
 
 align 8
 gdt_start:
@@ -51,7 +82,6 @@ gdt_descriptor:
     dw gdt_end - gdt_start - 1
     dd gdt_start
 
-; --- Protected mode ---
 use32
 protected_mode:
     mov ax, 0x10
@@ -60,9 +90,7 @@ protected_mode:
     mov fs, ax
     mov gs, ax
     mov ss, ax
-    mov esp, 0x90000        ; стек
+    mov esp, 0x90000
+    jmp 0x10000
 
-    jmp 0x10000             ; переход на entry ядра
-
-; Добиваем до 512 байт
 times 512-($-$$) db 0
