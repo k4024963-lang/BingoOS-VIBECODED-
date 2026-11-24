@@ -1,47 +1,17 @@
-; BingoOS stage2 — load kernel, enable A20, enter 32-bit protected mode
+; BingoOS stage2 — BIOS EDD kernel load, then 32-bit protected mode
 format binary
 org 0x8000
-
 start:
     cli
-
-    ; Kernel occupies LBA 2..33 (CHS 0/0/3..18, then 0/1/1..16).
-    ; Split BIOS reads at the track boundary; do not issue a request
-    ; that crosses a 1.44 MB floppy track.
-    mov ax, 0x1000
-    mov es, ax
-    xor bx, bx
-
-    ; First 16 sectors: cylinder 0, head 0, sectors 3..18.
-    mov ah, 0x02
-    mov al, 16
-    mov ch, 0
-    mov cl, 3
-    mov dh, 0
+    mov si, disk_address_packet
     mov dl, [0x7E00]
+    mov ah, 0x42
     int 0x13
     jc disk_error
-
-    ; Next 16 sectors: cylinder 0, head 1, sectors 1..16.
-    mov ax, 0x1000
-    mov es, ax
-    mov bx, 0x2000
-    mov ah, 0x02
-    mov al, 16
-    mov ch, 0
-    mov cl, 1
-    mov dh, 1
-    mov dl, [0x7E00]
-    int 0x13
-    jc disk_error
-
-    ; Enable A20 through the fast A20 gate.
     in al, 0x92
     or al, 2
     out 0x92, al
-
     lgdt [gdt_descriptor]
-
     mov eax, cr0
     or eax, 1
     mov cr0, eax
@@ -54,7 +24,6 @@ disk_error:
     cli
     hlt
     jmp .halt
-
 print16:
     lodsb
     test al, al
@@ -64,8 +33,15 @@ print16:
     jmp print16
 .done:
     ret
+msg_disk_error db 'BingoOS: EDD kernel read error', 0
 
-msg_disk_error db 'BingoOS: kernel read error', 0
+align 4
+disk_address_packet:
+    db 0x10, 0
+    dw 32
+    dw 0x0000
+    dw 0x1000
+    dq 2
 
 align 8
 gdt_start:
@@ -77,7 +53,6 @@ gdt_data:
     dw 0xFFFF, 0x0000
     db 0x00, 10010010b, 11001111b, 0x00
 gdt_end:
-
 gdt_descriptor:
     dw gdt_end - gdt_start - 1
     dd gdt_start
@@ -92,5 +67,4 @@ protected_mode:
     mov ss, ax
     mov esp, 0x90000
     jmp 0x10000
-
 times 512-($-$$) db 0
